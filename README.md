@@ -1,6 +1,11 @@
 # Order Processing API
 
 [![CI](https://github.com/leonlimask20-dot/order-processing-api/actions/workflows/ci.yml/badge.svg)](https://github.com/leonlimask20-dot/order-processing-api/actions/workflows/ci.yml)
+![Java](https://img.shields.io/badge/Java-17-orange?logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-brightgreen?logo=springboot&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue?logo=postgresql&logoColor=white)
+![Maven](https://img.shields.io/badge/Maven-3.8-red?logo=apachemaven&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
 API REST de processamento de pedidos construída com Java 17 + Spring Boot 3.5, aplicando **Clean Architecture** (Ports & Adapters) para isolar o domínio de negócio de frameworks, banco de dados e detalhes de infraestrutura.
 
