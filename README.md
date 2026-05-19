@@ -7,32 +7,34 @@
 ![Maven](https://img.shields.io/badge/Maven-3.8-red?logo=apachemaven&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
-API REST de processamento de pedidos construída com Java 17 + Spring Boot 3.5, aplicando **Clean Architecture** (Ports & Adapters) para isolar o domínio de negócio de frameworks, banco de dados e detalhes de infraestrutura.
+REST API for order processing built with Java 17 + Spring Boot 3.5, applying
+**Clean Architecture** (Ports & Adapters) to isolate the business domain from
+frameworks, database and infrastructure details.
 
-## Links rápidos
+## Quick links
 
 | | |
 |---|---|
-| Criar pedido | `POST http://localhost:8080/api/v1/orders` |
-| Consultar pedido | `GET http://localhost:8080/api/v1/orders/{id}` |
-| Cancelar pedido | `DELETE http://localhost:8080/api/v1/orders/{id}` |
-| Rodar com Docker | [Ir para seção](#execução) |
+| Create order | `POST http://localhost:8080/api/v1/orders` |
+| Get order | `GET http://localhost:8080/api/v1/orders/{id}` |
+| Cancel order | `DELETE http://localhost:8080/api/v1/orders/{id}` |
+| Run with Docker | [Go to section](#running) |
 
-## Principais competências demonstradas
+## Key skills demonstrated
 
-- Clean Architecture com separação estrita entre domínio, aplicação e infraestrutura
-- Ports & Adapters: `OrderRepository` definida no domínio, implementada na camada de persistência
-- Dependency Inversion: use cases são POJOs puros — sem `@Service`, sem dependência de Spring
-- Entidades de domínio com invariantes e comportamento encapsulado
-- DTOs de entrada e saída separados das entidades de domínio e JPA
-- Persistência com Spring Data JPA e PostgreSQL
-- Tratamento centralizado de erros com `@RestControllerAdvice`
-- Validação de entrada com Bean Validation
-- Containerização com Docker e Docker Compose
+- Clean Architecture with strict separation between domain, application and infrastructure
+- Ports & Adapters: `OrderRepository` defined in the domain, implemented in the persistence layer
+- Dependency Inversion: use cases are plain POJOs — no `@Service`, no Spring dependency
+- Domain entities with invariants and encapsulated behavior
+- Input and output DTOs kept separate from domain and JPA entities
+- Persistence with Spring Data JPA and PostgreSQL
+- Centralized error handling with `@RestControllerAdvice`
+- Input validation with Bean Validation
+- Containerization with Docker and Docker Compose
 
-## Tecnologias
+## Tech stack
 
-| Tecnologia | Versão |
+| Technology | Version |
 |---|---|
 | Java | 17 |
 | Spring Boot | 3.5.13 |
@@ -42,115 +44,121 @@ API REST de processamento de pedidos construída com Java 17 + Spring Boot 3.5, 
 | Lombok | — |
 | Docker + Docker Compose | — |
 
-## Fluxo de um pedido
+## Order flow
 
 ```
-1. POST /api/v1/orders        →  PlaceOrderRequest (DTO de entrada)
-2. OrderController            →  mapeia DTO para List<OrderItem> do domínio
-3. PlaceOrderUseCase          →  cria Order, aplica regras de negócio
-4. OrderRepository (porta)    →  interface definida no domínio
-5. OrderRepositoryImpl        →  implementa a porta usando JPA
-6. OrderResponseMapper        →  converte Order (domínio) para OrderResponse (DTO de saída)
+1. POST /api/v1/orders        →  PlaceOrderRequest (input DTO)
+2. OrderController            →  maps DTO to domain List<OrderItem>
+3. PlaceOrderUseCase          →  creates Order, applies business rules
+4. OrderRepository (port)     →  interface defined in the domain
+5. OrderRepositoryImpl        →  implements the port using JPA
+6. OrderResponseMapper        →  converts Order (domain) to OrderResponse (output DTO)
 ```
 
-O domínio nunca conhece JPA, Spring ou HTTP. A direção das dependências sempre aponta para dentro.
+The domain never knows about JPA, Spring or HTTP. Dependencies always point inward.
 
-## Arquitetura
+## Architecture
 
 ```
 src/main/java/com/lnl/orderprocessing/
-├── domain/                    → Núcleo. Zero dependências externas.
+├── domain/                    → Core. Zero external dependencies.
 │   ├── entity/                │   Order, OrderItem, Customer
 │   ├── enums/                 │   OrderStatus
 │   ├── event/                 │   OrderPlacedEvent
-│   └── repository/            │   OrderRepository (interface — porta de saída)
+│   └── repository/            │   OrderRepository (interface — outbound port)
 │
-├── application/               → Casos de uso. Orquestra o domínio.
+├── application/               → Use cases. Orchestrates the domain.
 │   └── usecase/               │   PlaceOrderUseCase, CancelOrderUseCase, TrackOrderUseCase
-│                              │   POJOs puros — sem @Service, sem Spring
+│                              │   Plain POJOs — no @Service, no Spring
 │
-├── adapters/                  → Tradutores entre domínio e mundo externo
-│   ├── controller/            │   OrderController, PlaceOrderRequest (entrada HTTP)
-│   ├── presenter/             │   OrderResponseMapper, OrderResponse (saída HTTP)
-│   └── persistence/           │   OrderEntity (JPA), OrderRepositoryImpl (implementa a porta)
+├── adapters/                  → Translators between domain and the outside world
+│   ├── controller/            │   OrderController, PlaceOrderRequest (HTTP input)
+│   ├── presenter/             │   OrderResponseMapper, OrderResponse (HTTP output)
+│   └── persistence/           │   OrderEntity (JPA), OrderRepositoryImpl (implements the port)
 │
-└── infrastructure/            → Configuração e tratamento de erros
-    ├── config/                │   BeanConfig — wiring dos use cases com Spring
+└── infrastructure/            → Configuration and error handling
+    ├── config/                │   BeanConfig — wires use cases with Spring
     └── exception/             │   GlobalExceptionHandler
 ```
 
-## Regras de negócio
+## Business rules
 
-**Ciclo de vida do pedido:**
+**Order lifecycle:**
 
 ```
 PENDING → CONFIRMED → IN_PREPARATION → OUT_FOR_DELIVERY → DELIVERED
                                                               ↑
-                                                    (não pode cancelar)
+                                                    (cannot be cancelled)
 ```
 
-- Pedido nasce com status `PENDING`
-- Só pedidos `PENDING` podem ser confirmados
-- Pedidos `DELIVERED` não podem ser cancelados
-- O total é calculado no domínio (`Order.total()`) — nunca no banco ou no controller
-- Cada `OrderItem` valida quantidade > 0 e preço > 0 na construção
+- An order starts with status `PENDING`
+- Only `PENDING` orders can be confirmed
+- `DELIVERED` orders cannot be cancelled
+- The total is calculated in the domain (`Order.total()`) — never in the database or controller
+- Each `OrderItem` validates quantity > 0 and price > 0 on construction
 
-**Decisões de design:**
+**Design decisions:**
 
-> **Por que os use cases não têm `@Service`?**
-> Anotar um use case com `@Service` cria uma dependência do Spring no núcleo da aplicação. O wiring é feito explicitamente em `BeanConfig`, mantendo os use cases como POJOs testáveis sem contexto Spring.
+> **Why don't the use cases have `@Service`?**
+> Annotating a use case with `@Service` creates a Spring dependency in the
+> application core. Wiring is done explicitly in `BeanConfig`, keeping use
+> cases as POJOs testable without a Spring context.
 
-> **Por que `OrderEntity` é separado de `Order`?**
-> `Order` é o objeto de domínio com comportamento e invariantes. `OrderEntity` é a representação relacional com anotações JPA. Misturá-los acoplaria o domínio ao banco de dados.
+> **Why is `OrderEntity` separate from `Order`?**
+> `Order` is the domain object, with behavior and invariants. `OrderEntity` is
+> the relational representation with JPA annotations. Mixing them would couple
+> the domain to the database.
 
-> **Por que `SpringDataOrderRepository` é package-private?**
-> Apenas `OrderRepositoryImpl` pode acessar o repositório JPA. Nenhuma outra classe pode bypassar a interface de domínio e chamar o banco diretamente.
+> **Why is `SpringDataOrderRepository` package-private?**
+> Only `OrderRepositoryImpl` can access the JPA repository. No other class can
+> bypass the domain interface and hit the database directly.
 
-## Pré-requisitos
+## Prerequisites
 
 - Java 17+
 - Maven 3.8+
 - Docker Desktop
 
-## Execução
+## Running
 
 ```bash
-# Sobe o banco PostgreSQL
+# Start the PostgreSQL database
 docker-compose up -d
 
-# Sobe a aplicação
+# Start the application
 mvn spring-boot:run
 ```
 
-API disponível em `http://localhost:8080`.
+API available at `http://localhost:8080`.
 
-> **Nota:** se você já tiver um PostgreSQL rodando na porta 5432, o Docker usa a porta 5433 neste projeto para evitar conflito.
+> **Note:** if you already have a PostgreSQL running on port 5432, Docker uses
+> port 5433 in this project to avoid conflicts.
 
-O Hibernate cria as tabelas automaticamente na primeira execução (`ddl-auto=update`).
+Hibernate creates the tables automatically on first run (`ddl-auto=update`).
 
 ## Endpoints
 
-### Pedidos
+### Orders
 
-| Método | Rota | Descrição |
+| Method | Route | Description |
 |---|---|---|
-| `POST` | `/api/v1/orders` | Criar pedido |
-| `GET` | `/api/v1/orders/{id}` | Consultar pedido |
-| `DELETE` | `/api/v1/orders/{id}` | Cancelar pedido |
+| `POST` | `/api/v1/orders` | Create order |
+| `GET` | `/api/v1/orders/{id}` | Get order |
+| `DELETE` | `/api/v1/orders/{id}` | Cancel order |
 
-## Exemplos
+## Examples
 
-### Criar pedido
+### Create order
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/orders \
   -H "Content-Type: application/json" \
   -d '{
-    "customerId": "cliente-001",
+    "customerId": "customer-001",
     "items": [
       {
         "productId": "prod-001",
-        "productName": "X-Burguer",
+        "productName": "Cheeseburger",
         "quantity": 2,
         "unitPrice": 25.90
       }
@@ -161,13 +169,13 @@ curl -X POST http://localhost:8080/api/v1/orders \
 ```json
 {
   "id": "f796cfd2-3413-4666-892e-f19c81a9c7c3",
-  "customerId": "cliente-001",
+  "customerId": "customer-001",
   "status": "PENDING",
   "total": 51.80,
   "items": [
     {
       "productId": "prod-001",
-      "productName": "X-Burguer",
+      "productName": "Cheeseburger",
       "quantity": 2,
       "unitPrice": 25.90,
       "subtotal": 51.80
@@ -177,26 +185,36 @@ curl -X POST http://localhost:8080/api/v1/orders \
 }
 ```
 
-### Consultar pedido
+### Get order
 
 ```bash
 curl http://localhost:8080/api/v1/orders/f796cfd2-3413-4666-892e-f19c81a9c7c3
 ```
 
-### Cancelar pedido
+### Cancel order
 
 ```bash
 curl -X DELETE http://localhost:8080/api/v1/orders/f796cfd2-3413-4666-892e-f19c81a9c7c3
 ```
 
-## Considerações para produção
+## 🤖 Agent Architecture
 
-- Substituir `ddl-auto=update` por migrations com Flyway ou Liquibase
-- Adicionar testes de integração com Testcontainers para paridade com o banco de produção
-- Implementar paginação nos endpoints de listagem
-- Adicionar eventos de domínio com publicação via RabbitMQ ou Kafka ao confirmar pedidos
-- Configurar HTTPS com certificado TLS
+This project was built and code-reviewed using a **multi-agent
+context-optimization workflow**: specialized AI agents each audit a single
+architectural layer — domain, use cases, adapters, infrastructure, tests —
+within a strict context budget. The approach cuts review time and token cost
+while keeping full traceability of every finding.
 
-## Autor
+Methodology, agent templates and the full playbook: **[leonlim3.gumroad.com](https://leonlim3.gumroad.com)**
+
+## Production considerations
+
+- Replace `ddl-auto=update` with migrations using Flyway or Liquibase
+- Add integration tests with Testcontainers for parity with the production database
+- Implement pagination on listing endpoints
+- Add domain events published via RabbitMQ or Kafka when orders are confirmed
+- Configure HTTPS with a TLS certificate
+
+## Author
 
 LNL &nbsp; GitHub: [@leonlimask20-dot](https://github.com/leonlimask20-dot) &nbsp; Email: leonlimask@gmail.com
